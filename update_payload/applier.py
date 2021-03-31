@@ -517,7 +517,8 @@ class PayloadApplier(object):
 
   def _ApplyToPartition(self, operations, part_name, base_name,
                         new_part_file_name, new_part_info,
-                        old_part_file_name=None, old_part_info=None):
+                        old_part_file_name=None, old_part_info=None,
+                        skip_hash=None):
     """Applies an update to a partition.
 
     Args:
@@ -528,16 +529,18 @@ class PayloadApplier(object):
       new_part_info: size and expected hash of dest partition
       old_part_file_name: file name of source partition (optional)
       old_part_info: size and expected hash of source partition (optional)
+      skip_hash: command line arg to skip hash checks
 
     Raises:
       PayloadError if anything goes wrong with the update.
     """
     # Do we have a source partition?
     if old_part_file_name:
-      # Verify the source partition.
-      with open(old_part_file_name, 'rb') as old_part_file:
-        _VerifySha256(old_part_file, old_part_info.hash,
-                      'old ' + part_name, length=old_part_info.size)
+      # Verify the source partition if skip_hash arg was not given.
+      if not skip_hash:
+        with open(old_part_file_name, 'rb') as old_part_file:
+          _VerifySha256(old_part_file, old_part_info.hash,
+                        'old ' + part_name, length=old_part_info.size)
       new_part_file_mode = 'r+b'
       open(new_part_file_name, 'w').close()
 
@@ -548,7 +551,7 @@ class PayloadApplier(object):
     # Apply operations.
     with open(new_part_file_name, new_part_file_mode) as new_part_file:
       old_part_file = (open(old_part_file_name, 'r+b')
-                       if old_part_file_name else None)
+                       if os.path.exists(old_part_file_name) else None)
       try:
         self._ApplyOperations(operations, base_name, old_part_file,
                               new_part_file, new_part_info.size)
@@ -563,10 +566,11 @@ class PayloadApplier(object):
           new_part_file.seek(new_part_info.size)
           new_part_file.truncate()
 
-    # Verify the resulting partition.
-    with open(new_part_file_name, 'rb') as new_part_file:
-      _VerifySha256(new_part_file, new_part_info.hash,
-                    'new ' + part_name, length=new_part_info.size)
+    # Verify the resulting partition if skip_hash arg was not given.
+    if not skip_hash:
+      with open(new_part_file_name, 'rb') as new_part_file:
+        _VerifySha256(new_part_file, new_part_info.hash,
+                      'new ' + part_name, length=new_part_info.size)
 
   def Run(self, new_parts, old_parts=None):
     """Applier entry point, invoking all update operations.
