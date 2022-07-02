@@ -551,7 +551,7 @@ class PayloadApplier(object):
     # Apply operations.
     with open(new_part_file_name, new_part_file_mode) as new_part_file:
       old_part_file = (open(old_part_file_name, 'r+b')
-                       if os.path.exists(old_part_file_name) else None)
+                       if old_part_file_name else None)
       try:
         self._ApplyOperations(operations, base_name, old_part_file,
                               new_part_file, new_part_info.size)
