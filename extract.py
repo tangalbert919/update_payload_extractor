@@ -20,7 +20,7 @@ def list_content(payload_file_name):
                                          part.new_partition_info.size))
 
 
-def extract(payload_file_name, output_dir="output", old_dir="old", partition_names=None, skip_hash=None):
+def extract(payload_file_name, output_dir="output", old_dir="old", partition_names=None, skip_hash=None, skip_partitions=None):
     try:
         os.makedirs(output_dir)
     except OSError as e:
@@ -36,7 +36,7 @@ def extract(payload_file_name, output_dir="output", old_dir="old", partition_nam
 
         helper = applier.PayloadApplier(payload)
         for part in payload.manifest.partitions:
-            if partition_names and part.partition_name not in partition_names:
+            if (partition_names and part.partition_name not in partition_names) or (skip_partitions and part.partition_name in skip_partitions):
                 continue
             print("Extracting {}".format(part.partition_name))
             output_file = os.path.join(output_dir, part.partition_name)
@@ -74,9 +74,11 @@ if __name__ == '__main__':
                         help="List the partitions included in the payload.bin")
     parser.add_argument("--skip_hash", action="store_true",
                         help="Skip the hash check for individual img files")
+    parser.add_argument("--skip_partitions", type=str, nargs='+',
+                        help="Name of the partitions to skip")
 
     args = parser.parse_args()
     if args.list_partitions:
         list_content(args.payload)
     else:
-        extract(args.payload, args.output_dir, args.old_dir, args.partitions, args.skip_hash)
+        extract(args.payload, args.output_dir, args.old_dir, args.partitions, args.skip_hash, args.skip_partitions)
